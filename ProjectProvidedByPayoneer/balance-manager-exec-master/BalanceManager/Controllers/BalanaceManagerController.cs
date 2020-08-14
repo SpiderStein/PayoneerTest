@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace BalanceManager.Controllers
+namespace BalanceManager
 {
     [ApiController]
     [Route("api/balances/v1/[controller]")]
