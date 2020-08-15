@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
+using BalanceManager.DAL;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -57,8 +59,12 @@ namespace BalanceManager
         // Don't build the container; that gets done for you by the factory.
         public void ConfigureContainer(ContainerBuilder builder)
         {
-            // Register your own things directly with Autofac, like:
-            // builder.RegisterModule(new MyApplicationModule());
+            builder.Register(c =>
+            {
+                return new PayoneerDB(long.MinValue, new ConcurrentDictionary<long, BalanceInfo>(), new object());
+            })
+            .As<IPayoneerDBDAL>()
+            .SingleInstance();
         }
     }
 }

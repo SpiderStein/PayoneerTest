@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 namespace BalanceManager.DAL
 {
-    internal interface IPayoneerDBDAL
+    public interface IPayoneerDBDAL
     {
         /// <returns>Balance ID</returns>
         Task<long> CreateBalance();

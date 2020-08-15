@@ -15,9 +15,15 @@ namespace BalanceManager
         private long newestBalanceID; // Maybe it's better to type "BalanceInfo.ID" as ulong.
         private ConcurrentDictionary<long, BalanceInfo> balanceIDToBalance { get; set; }
         private object dicAccessSyncObj { get; set; }
-        public PayoneerDB()
+
+        public PayoneerDB(
+            long IncrementalIDBase,
+            ConcurrentDictionary<long, BalanceInfo> balanceIDToBalance,
+            object dicAccessSyncObj)
         {
-            // this.newestBalanceID = long.MaxValue;                        PROVIDE the value behind in the iocC.
+            this.newestBalanceID = IncrementalIDBase - 1;
+            this.balanceIDToBalance = balanceIDToBalance;
+            this.dicAccessSyncObj = dicAccessSyncObj;
         }
 
         public Task<long> CreateBalance()
