@@ -38,6 +38,45 @@ namespace BalanceManager
             return Ok(balance);
         }
 
+        [HttpGet("Charge/{balanceID}/{amount}")]
+        public async Task<ActionResult> Charge(long balanceID, float amount)
+        {
+            var (doesBalanceExist, isBalanceAmountEnough) = await this.payoneerDBDAL.Charge(balanceID, amount).ConfigureAwait(false);
+            if (!doesBalanceExist)
+            {
+                return BadRequest(new Exception("Balance doesn't exist"));
+            }
+            if (!isBalanceAmountEnough)
+            {
+                return BadRequest(new Exception("Balance doesn't have sufficient amount"));
+            }
+            return Ok();
+        }
 
+        [HttpGet("Load/{balanceID}/{amount}")]
+        public async Task<ActionResult> Load(long balanceID, float amount)
+        {
+            var doesBalanceExist = await this.payoneerDBDAL.Load(balanceID, amount).ConfigureAwait(false);
+            if (!doesBalanceExist)
+            {
+                return BadRequest(new Exception("Balance doesn't exist"));
+            }
+            return Ok();
+        }
+
+        [HttpGet("Transfer/{senderBalanceID}/{recipientBalanceID}/{amount}")]
+        public async Task<ActionResult> Transfer(long senderBalanceID, long recipientBalanceID, float amount)
+        {
+            var (doBalancesExist, isSenderBalanceAmountEnough) = await this.payoneerDBDAL.Transfer(senderBalanceID, recipientBalanceID, amount).ConfigureAwait(false);
+            if (!doBalancesExist)
+            {
+                return BadRequest(new Exception("One of the balances or both don't exist"));
+            }
+            if (!isSenderBalanceAmountEnough)
+            {
+                return BadRequest(new Exception("The sender's balance doesn't have sufficient amount for the transaction"));
+            }
+            return Ok();
+        }
     }
 }
