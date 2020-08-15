@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using System;
 using System.Collections.Concurrent;
@@ -56,9 +57,9 @@ namespace BalanceManager
             });
         }
 
-        public Task<bool> Charge(long balanceID, float amount)
+        public Task<(bool, bool)> Charge(long balanceID, float amount)
         {
-            return Task.Run<bool>(() =>
+            return Task.Run<(bool, bool)>(() =>
             {
                 BalanceInfo balance;
                 lock (this.dicAccessSyncObj)
@@ -66,8 +67,26 @@ namespace BalanceManager
                     var doesBalanceExist = this.balanceIDToBalance.TryGetValue(balanceID, out balance);
                     if (!doesBalanceExist)
                     {
-                        return false;
+                        return (false, false);
                     }
+                    if (balance.Amount < amount)
+                    {
+                        return (true, false);
+                    }
+                    //  Arbitrarily chose to use optimistic concurrency.
+                    //  According to the msft docs, even if I lock, I can't be sure that the attempt to
+                    //  update will be successful.
+                    while (!this.balanceIDToBalance.TryUpdate(balanceID, //  Arbitrarily chose to use optimistic concurrency.
+                       new BalanceInfo
+                       {
+                           BalanceId = balance.BalanceId,
+                           CreateDate = balance.CreateDate,
+                           UpdateDate = balance.UpdateDate,
+                           Amount = balance.Amount - amount
+                       }, balance))
+                    { }
+
+                    return (true, true);
                 }
             });
         }
@@ -84,23 +103,63 @@ namespace BalanceManager
                    {
                        return false;
                    }
-                   while (!this.balanceIDToBalance.TryUpdate(balanceID, //  Arbitrarily chose to use optimistic concurrency.
+                   //  Arbitrarily chose to use optimistic concurrency.
+                   //  According to the msft docs, even if I lock, I can't be sure that the attempt to
+                   //  update will be successful.
+                   while (!this.balanceIDToBalance.TryUpdate(balanceID,
                        new BalanceInfo
                        {
                            BalanceId = balance.BalanceId,
                            CreateDate = balance.CreateDate,
                            UpdateDate = balance.UpdateDate,
                            Amount = balance.Amount + amount
-                       }, balance)) { }
+                       }, balance))
+                   { }
 
                    return true;
                }
            });
         }
 
-        public Task Transfer(long senderBalanceID, long recipientBalanceID)
+        public Task<(bool, bool)> Transfer(long senderBalanceID, long recipientBalanceID, float amount)
         {
-            throw new System.NotImplementedException();
+            return Task.Run<(bool, bool)>(() =>
+            {
+                BalanceInfo senderBalance, recipientBalance;
+                lock (this.dicAccessSyncObj)
+                {
+                    var doesBalanceExist = this.balanceIDToBalance.TryGetValue(senderBalanceID, out senderBalance);
+                    if (!doesBalanceExist)
+                    {
+                        return (false, false);
+                    }
+                    doesBalanceExist = this.balanceIDToBalance.TryGetValue(recipientBalanceID, out recipientBalance);
+                    if (!doesBalanceExist)
+                    {
+                        return (false, false);
+                    }
+                    while (!this.balanceIDToBalance.TryUpdate(senderBalanceID,
+                       new BalanceInfo
+                       {
+                           BalanceId = senderBalance.BalanceId,
+                           CreateDate = senderBalance.CreateDate,
+                           UpdateDate = senderBalance.UpdateDate,
+                           Amount = senderBalance.Amount - amount
+                       }, senderBalance))
+                    { }
+                    while (!this.balanceIDToBalance.TryUpdate(recipientBalanceID,
+                       new BalanceInfo
+                       {
+                           BalanceId = recipientBalance.BalanceId,
+                           CreateDate = recipientBalance.CreateDate,
+                           UpdateDate = recipientBalance.UpdateDate,
+                           Amount = recipientBalance.Amount + amount
+                       }, recipientBalance))
+                    { }
+
+                    return (true, true);
+                }
+            });
         }
     }
 }
