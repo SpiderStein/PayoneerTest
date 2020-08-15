@@ -144,6 +144,10 @@ namespace BalanceManager
                     {
                         return (false, false);
                     }
+                    if (senderBalance.Amount < amount)
+                    {
+                        return (true, false);
+                    }
                     while (!this.balanceIDToBalance.TryUpdate(senderBalanceID,
                        new BalanceInfo
                        {
